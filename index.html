@@ -235,9 +235,10 @@ function createGlowTexture() {
 const glowTexture = createGlowTexture();
 
 /* MARKERS GROUP FOR RAYCASTING */
-const markers = [];
-const markerHelpers = new THREE.Group();
-scene.add(markerHelpers);
+const pins = [];           // Visible glowing pin heads
+const helperMarkers = [];  // Invisible larger helpers for reliable detection
+const markerGroup = new THREE.Group();
+scene.add(markerGroup);
 
 /* TOP 30 DATA */
 const oilData = [
@@ -274,9 +275,9 @@ const oilData = [
 ];
 
 oilData.forEach(d => {
-  const basePos = latLonToVector3(d.lat, d.lon, 1.005); // base of stem
+  const basePos = latLonToVector3(d.lat, d.lon, 1.005);
 
-  // Thin white stem (pole)
+  // Stem
   const stemGeometry = new THREE.CylinderGeometry(0.003, 0.003, 0.12, 8);
   const stemMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.85, transparent: true });
   const stem = new THREE.Mesh(stemGeometry, stemMaterial);
@@ -285,7 +286,7 @@ oilData.forEach(d => {
   stem.rotateX(Math.PI / 2);
   globe.add(stem);
 
-  // Glowing green pin head
+  // Glowing pin head
   const pin = new THREE.Sprite(
     new THREE.SpriteMaterial({
       map: glowTexture,
@@ -299,16 +300,17 @@ oilData.forEach(d => {
   pin.position.copy(pinPos);
   pin.userData = d;
   globe.add(pin);
+  pins.push(pin);
 
-  // Invisible helper sphere for reliable hover
+  // Larger invisible helper sphere (increased radius for reliable hover even on edges)
   const helper = new THREE.Mesh(
-    new THREE.SphereGeometry(0.045, 16, 16),
+    new THREE.SphereGeometry(0.08, 16, 16), // Larger than before
     new THREE.MeshBasicMaterial({ visible: false })
   );
   helper.position.copy(pinPos);
   helper.userData = d;
-  markerHelpers.add(helper);
-  markers.push(helper);
+  markerGroup.add(helper);
+  helperMarkers.push(helper);
 });
 
 /* INTERACTION */
@@ -319,6 +321,7 @@ const mouse = new THREE.Vector2();
 window.addEventListener("mousemove", e => {
   mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
   tooltip.style.left = e.clientX + 12 + "px";
   tooltip.style.top = e.clientY + 12 + "px";
 });
@@ -328,14 +331,26 @@ function animate() {
   globe.rotation.y += 0.0004;
 
   raycaster.setFromCamera(mouse, camera);
-  const hits = raycaster.intersectObjects(markers);
-  if (hits.length) {
-    const d = hits[0].object.userData;
-    tooltip.style.display = "block";
-    tooltip.innerHTML = `<strong>#${d.rank} ${d.country}</strong><br>${d.reserves}B barrels`;
+
+  // Check visibility: only show tooltip if the pin is facing the camera (front side)
+  const intersects = raycaster.intersectObjects(helperMarkers);
+  if (intersects.length > 0) {
+    const hit = intersects[0];
+    const point = hit.point;
+    const normal = point.clone().normalize(); // Direction from center to hit point
+
+    // Check if the pin is on the front half (dot product > 0 means facing camera)
+    if (normal.dot(camera.position) > 0) {
+      const d = hit.object.userData;
+      tooltip.style.display = "block";
+      tooltip.innerHTML = `<strong>#${d.rank} ${d.country}</strong><br>${d.reserves}B barrels`;
+    } else {
+      tooltip.style.display = "none";
+    }
   } else {
     tooltip.style.display = "none";
   }
+
   renderer.render(scene, camera);
 }
 

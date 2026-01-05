@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Global Oil Reserves — Top 30 Countries</title>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: radial-gradient(circle at center, #050b14, #000);
+  font-family: Arial, sans-serif;
+}
+canvas { display: block; }
+
+/* TOOLTIP */
+#tooltip {
+  position: absolute;
+  padding: 8px 12px;
+  background: rgba(5, 10, 20, 0.95);
+  color: #7CFFB2;
+  font-size: 13px;
+  border-radius: 8px;
+  pointer-events: none;
+  display: none;
+  white-space: nowrap;
+  box-shadow: 0 0 14px rgba(0,255,160,0.35);
+  z-index: 20;
+}
+
+/* NAVBAR */
+#navbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 22px;
+  background: rgba(5,10,20,0.85);
+  backdrop-filter: blur(8px);
+  z-index: 10;
+}
+.nav-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.logo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* LOGO IMAGE */
+.logo-img {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+
+/* OILCOIN TEXT */
+.oilcoin-text {
+  color: #f5c77a;
+  font-size: 20px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* WALLET */
+.wallet {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+  color: #7cffb2;
+  font-size: 13px;
+}
+
+.nav-right {
+  display: flex;
+  gap: 10px;
+}
+.nav-btn {
+  background: rgba(255,255,255,0.05);
+  border: none;
+  color: #cfd8ff;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.nav-btn.active {
+  background: rgba(124,255,178,0.18);
+  color: #7cffb2;
+}
+
+/* LEFT PANEL */
+#side-panel {
+  position: absolute;
+  left: 18px;
+  bottom: 22px;
+  width: 220px;
+  background: rgba(5,10,20,0.9);
+  border-radius: 14px;
+  padding: 16px;
+  z-index: 10;
+}
+.panel-title {
+  color: #9fb3ff;
+  font-size: 13px;
+  margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+.region {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0;
+  font-size: 13px;
+  color: #e0e6ff;
+}
+.region span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.americas { background:#39ff9d; }
+.middleeast { background:#5ad1ff; }
+.africa { background:#f5c77a; }
+.russia { background:#b68cff; }
+.asia { background:#ff8c8c; }
+.europe { background:#aaa; }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div id="navbar">
+  <div class="nav-left">
+    <div class="logo-row">
+      <img src="oil.jpg" class="logo-img" alt="Oil Logo">
+      <div class="oilcoin-text">OILCOIN</div>
+    </div>
+    <div class="wallet">CA: Z8HRt7Pf1oERNqvJyshUbW5LeFNgo2usdRV3fsWhoiL</div>
+  </div>
+  <div class="nav-right">
+    <a href="https://x.com/i/communities/2007675028931043509" target="_blank">
+      <button class="nav-btn active">X COMM</button>
+    </a>
+  </div>
+</div>
+
+<!-- LEFT PANEL -->
+<div id="side-panel">
+  <div class="panel-title">RESERVES BY REGION</div>
+  <div class="region"><span><div class="dot americas"></div>Americas</span><strong>532B</strong></div>
+  <div class="region"><span><div class="dot middleeast"></div>Middle East</span><strong>836B</strong></div>
+  <div class="region"><span><div class="dot africa"></div>Africa</span><strong>125B</strong></div>
+  <div class="region"><span><div class="dot russia"></div>Russia & CIS</span><strong>146B</strong></div>
+  <div class="region"><span><div class="dot asia"></div>Asia Pacific</span><strong>45B</strong></div>
+  <div class="region"><span><div class="dot europe"></div>Europe</span><strong>12B</strong></div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+/* ================= SCENE ================= */
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.z = 3;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+/* LIGHT */
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(5, 3, 5);
+scene.add(dirLight);
+
+/* GLOBE */
+const loader = new THREE.TextureLoader();
+const earthTexture = loader.load("https://threejs.org/examples/textures/land_ocean_ice_cloud_2048.jpg");
+
+const globe = new THREE.Mesh(
+  new THREE.SphereGeometry(1, 64, 64),
+  new THREE.MeshStandardMaterial({
+    map: earthTexture,
+    roughness: 1,
+    emissive: new THREE.Color(0x050b14),
+    emissiveIntensity: 0.6
+  })
+);
+scene.add(globe);
+
+/* LAT/LON HELPER */
+function latLonToVector3(lat, lon, radius = 1) {
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = (lon + 180) * Math.PI / 180;
+  return new THREE.Vector3(
+    -radius * Math.sin(phi) * Math.cos(theta),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
+/* GLOW TEXTURE FOR PIN HEAD */
+function createGlowTexture() {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  gradient.addColorStop(0, "rgba(124,255,178,1)");
+  gradient.addColorStop(0.35, "rgba(124,255,178,0.6)");
+  gradient.addColorStop(1, "rgba(124,255,178,0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  return new THREE.CanvasTexture(canvas);
+}
+const glowTexture = createGlowTexture();
+
+/* MARKERS GROUP FOR RAYCASTING */
+const markers = [];
+const markerHelpers = new THREE.Group();
+scene.add(markerHelpers);
+
+/* TOP 30 DATA */
+const oilData = [
+  {rank:1,country:"Venezuela",reserves:303,lat:6.4,lon:-66.6},
+  {rank:2,country:"Saudi Arabia",reserves:297,lat:24.7,lon:46.7},
+  {rank:3,country:"Canada",reserves:168,lat:56.1,lon:-106.3},
+  {rank:4,country:"Iran",reserves:158,lat:32.4,lon:53.7},
+  {rank:5,country:"Iraq",reserves:145,lat:33.2,lon:43.7},
+  {rank:6,country:"United Arab Emirates",reserves:98,lat:23.4,lon:53.8},
+  {rank:7,country:"Kuwait",reserves:101.5,lat:29.3,lon:47.5},
+  {rank:8,country:"Russia",reserves:107.8,lat:61.5,lon:105.3},
+  {rank:9,country:"United States",reserves:68.8,lat:37.1,lon:-95.7},
+  {rank:10,country:"Libya",reserves:48.4,lat:26.3,lon:17.2},
+  {rank:11,country:"Nigeria",reserves:36.9,lat:9.1,lon:8.7},
+  {rank:12,country:"Kazakhstan",reserves:30,lat:48.0,lon:67.0},
+  {rank:13,country:"China",reserves:26,lat:35.8,lon:104.2},
+  {rank:14,country:"Qatar",reserves:25.2,lat:25.3,lon:51.2},
+  {rank:15,country:"Algeria",reserves:12.2,lat:28.0,lon:1.7},
+  {rank:16,country:"Brazil",reserves:11.9,lat:-14.2,lon:-51.9},
+  {rank:17,country:"Ecuador",reserves:8.3,lat:-1.8,lon:-78.2},
+  {rank:18,country:"Norway",reserves:7.9,lat:60.5,lon:8.5},
+  {rank:19,country:"Azerbaijan",reserves:7,lat:40.4,lon:47.1},
+  {rank:20,country:"Mexico",reserves:6.1,lat:23.6,lon:-102.5},
+  {rank:21,country:"Oman",reserves:5.4,lat:21.0,lon:57.0},
+  {rank:22,country:"India",reserves:4.5,lat:20.6,lon:78.9},
+  {rank:23,country:"Sudan",reserves:5,lat:12.8,lon:30.0},
+  {rank:24,country:"Vietnam",reserves:4.4,lat:14.0,lon:108.0},
+  {rank:25,country:"Egypt",reserves:3.3,lat:26.8,lon:30.8},
+  {rank:26,country:"Argentina",reserves:2.9,lat:-34.6,lon:-58.4},
+  {rank:27,country:"Malaysia",reserves:3.6,lat:4.2,lon:101.9},
+  {rank:28,country:"Angola",reserves:7.8,lat:-12.3,lon:18.5},
+  {rank:29,country:"Indonesia",reserves:2.4,lat:-0.8,lon:114.0},
+  {rank:30,country:"Colombia",reserves:2.0,lat:4.6,lon:-74.1}
+];
+
+oilData.forEach(d => {
+  const basePos = latLonToVector3(d.lat, d.lon, 1.005); // base of stem
+
+  // Thin white stem (pole)
+  const stemGeometry = new THREE.CylinderGeometry(0.003, 0.003, 0.12, 8);
+  const stemMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, opacity: 0.85, transparent: true });
+  const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+  stem.position.copy(basePos);
+  stem.lookAt(new THREE.Vector3(0,0,0));
+  stem.rotateX(Math.PI / 2);
+  globe.add(stem);
+
+  // Glowing green pin head
+  const pin = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTexture,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    })
+  );
+  pin.scale.set(0.09, 0.09, 1);
+  const pinPos = latLonToVector3(d.lat, d.lon, 1.08);
+  pin.position.copy(pinPos);
+  pin.userData = d;
+  globe.add(pin);
+
+  // Invisible helper sphere for reliable hover
+  const helper = new THREE.Mesh(
+    new THREE.SphereGeometry(0.045, 16, 16),
+    new THREE.MeshBasicMaterial({ visible: false })
+  );
+  helper.position.copy(pinPos);
+  helper.userData = d;
+  markerHelpers.add(helper);
+  markers.push(helper);
+});
+
+/* INTERACTION */
+const tooltip = document.getElementById("tooltip");
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener("mousemove", e => {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  tooltip.style.left = e.clientX + 12 + "px";
+  tooltip.style.top = e.clientY + 12 + "px";
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  globe.rotation.y += 0.0004;
+
+  raycaster.setFromCamera(mouse, camera);
+  const hits = raycaster.intersectObjects(markers);
+  if (hits.length) {
+    const d = hits[0].object.userData;
+    tooltip.style.display = "block";
+    tooltip.innerHTML = `<strong>#${d.rank} ${d.country}</strong><br>${d.reserves}B barrels`;
+  } else {
+    tooltip.style.display = "none";
+  }
+  renderer.render(scene, camera);
+}
+
+animate();
+
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+
+</body>
+</html>
